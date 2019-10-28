@@ -45,7 +45,7 @@ int CreateSocket(int protocol){
             dS = socket(AF_INET,SOCK_DGRAM,0);
             break;
         default:
-            fprintf(stderr,ANSI_COLOR_RED "[*] Error please set correct numbers for the function (see Tools/Functions.c)\n" ANSI_COLOR_RESET);
+            fprintf(stderr,ANSI_COLOR_RED "[*] Error please set correct numbers for the function (0 = TCP, 1 = UDP)\n" ANSI_COLOR_RESET);
             exit(1);
             break;
     }
@@ -84,15 +84,14 @@ int Listen(int dS){
 }
 
 //Accepting a connectiona (only in TCP)
-int AcceptTCP(int dS,struct sockaddr adCli, socklen_t adCliLength){
+int AcceptTCP(int dS,struct sockaddr_storage adCli, socklen_t adCliLength){
     int dSC = accept(dS,(struct sockaddr *)&adCli,&adCliLength);
     if(dSC == -1){
         perror("Error accepting a client : ");
         exit(1);
     }
-
     char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-    getnameinfo(&adCli,adCliLength,hbuf,sizeof(hbuf), sbuf,sizeof(sbuf),0); 
+    getnameinfo((struct sockaddr *)&adCli,adCliLength,hbuf,sizeof(hbuf), sbuf,sizeof(sbuf),0); 
     printf("[*] Starting interaction with %s:%s...\n",hbuf,sbuf);
 
     return dSC;
@@ -116,7 +115,7 @@ void SendMessageTCP(int dS, char * message,int sizeM){
     char buffer[sizeM+1]; 
     strcpy(buffer,message);
     buffer[sizeM+1] = '\0';
-    int dSend = send(dS,buffer,sizeof(buffer),0);
+    int dSend = send(dS,buffer,sizeM,0);
     if(dSend == -1){
         perror("Error while sending message : ");
         exit(1);
@@ -150,7 +149,21 @@ void SendMessageUDP(int dS,char * server, char * port,char  * message,int sizeM)
     promptS("Success.");
     return;
 }
-
+//Recive 1 message in UDP
+    int ReciveUDP(int dS,char * buffer){
+    struct sockaddr_in aE;
+    socklen_t lg = sizeof(aE);
+    char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+    int dR = recvfrom(dS,buffer,sizeof(buffer),0,(struct sockaddr*)&aE,&lg); 
+    if(dR == -1){
+        perror(ANSI_COLOR_RED "Error while sending message :" ANSI_COLOR_RESET);
+        exit(1);
+    }
+    getnameinfo((struct sockaddr*)&aE,lg,hbuf,sizeof(hbuf), sbuf,sizeof(sbuf),0);
+    printf("Receving message from %s:%s. (size : %d)\n",hbuf,sbuf,dR); 
+    printf("Data : %s\n",buffer);
+    return dR;
+}
 //Recive a message from a host in TCP
 char * ReciveMessage(int dS,socklen_t length){ 
     //length is the size of your receving buffer, if set to 0 the size will be the highest that your socket can recv.
