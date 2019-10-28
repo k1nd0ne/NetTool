@@ -12,7 +12,9 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-//Simple prompting message tool
+/********************************************************************/
+/* A simple set of colored message functions. (blue,green,red)      */
+/********************************************************************/
 
 void promptM(char * message){
     fprintf(stdout,ANSI_COLOR_CYAN "[*]" ANSI_COLOR_RESET " %s\n",message);
@@ -25,15 +27,19 @@ void promptE(char * message){
     fprintf(stderr,ANSI_COLOR_RED "[*] %s\n" ANSI_COLOR_RESET ,message);
 }
 
-//Get client ip
+/********************************************************************/
+/*Return the string containing  the hostname of a machine           */
+/********************************************************************/
 char * getHost(struct sockaddr aE,socklen_t lg){
     char * hbuf = malloc(NI_MAXHOST* sizeof(char));
     getnameinfo((struct sockaddr*)&aE,lg,hbuf,sizeof(hbuf),NULL,0,0);
-
     return hbuf;
 }
 
-//Create a TCP or UDP Socket
+/********************************************************************/
+/* Create a socket in SOCK_STREAM or SOCK_DGRAM                     */
+/* 0 = TCP ; 1 = UDP                                                */
+/********************************************************************/
 int CreateSocket(int protocol){
     promptM("Creating socket...");
     int dS = -1;
@@ -41,7 +47,7 @@ int CreateSocket(int protocol){
         case 0:
             dS = socket(AF_INET,SOCK_STREAM,0);
             break;
-        case 1: 
+        case 1:
             dS = socket(AF_INET,SOCK_DGRAM,0);
             break;
         default:
@@ -57,7 +63,9 @@ int CreateSocket(int protocol){
     return dS;
 }
 
-//Bind the socket (TCP or UDP)
+/********************************************************************/
+/* Bind a socket with the givin port                                */
+/********************************************************************/
 int BindSocket(int dS,char * argv){
     promptM("Binding...");
     struct sockaddr_in ad;
@@ -72,18 +80,22 @@ int BindSocket(int dS,char * argv){
     promptS("Done.");
     return dB;
 }
-
+/********************************************************************/
+/* Listen on a giving socket                                        */
+/********************************************************************/
 int Listen(int dS){
     promptS("Starting listener...\n");
     int dL = listen(dS,10);
     if(dL == -1){
-        perror("Error listening on the socket : "); 
+        perror("Error listening on the socket : ");
         exit(1);
     }
     return dL;
 }
 
-//Accepting a connectiona (only in TCP)
+/********************************************************************/
+/* Accepting a TCP connection on a socket with an empty addrinfo    */
+/********************************************************************/
 int AcceptTCP(int dS,struct sockaddr_storage adCli, socklen_t adCliLength){
     int dSC = accept(dS,(struct sockaddr *)&adCli,&adCliLength);
     if(dSC == -1){
@@ -91,13 +103,15 @@ int AcceptTCP(int dS,struct sockaddr_storage adCli, socklen_t adCliLength){
         exit(1);
     }
     char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-    getnameinfo((struct sockaddr *)&adCli,adCliLength,hbuf,sizeof(hbuf), sbuf,sizeof(sbuf),0); 
+    getnameinfo((struct sockaddr *)&adCli,adCliLength,hbuf,sizeof(hbuf), sbuf,sizeof(sbuf),0);
     printf("[*] Starting interaction with %s:%s...\n",hbuf,sbuf);
 
     return dSC;
 }
 
-//Connect to the TCP Server
+/********************************************************************/
+/* Connect to a TCP server with a hostname/IP and a port            */
+/********************************************************************/
 int CConnect(int dS,char* server, char* port){
     struct addrinfo * addressInfo;
     getaddrinfo(server,port,NULL,&addressInfo);
@@ -110,9 +124,11 @@ int CConnect(int dS,char* server, char* port){
     return dC;
 }
 
-//Send a message to a TCP server
+/********************************************************************/
+/* Send "message" string to a TCP server                            */
+/********************************************************************/
 void SendMessageTCP(int dS, char * message,int sizeM){
-    char buffer[sizeM+1]; 
+    char buffer[sizeM+1];
     strcpy(buffer,message);
     buffer[sizeM+1] = '\0';
     int dSend = send(dS,buffer,sizeM,0);
@@ -122,7 +138,9 @@ void SendMessageTCP(int dS, char * message,int sizeM){
     }
     return;
 }
-
+/********************************************************************/
+/* Send an integer to a TCP server                                  */
+/********************************************************************/
 void SendIntTcp(int dS,int entier){
     int dSend = send(dS,&entier,sizeof(int),0);
     if(dSend == -1){
@@ -131,8 +149,23 @@ void SendIntTcp(int dS,int entier){
        }
     return;
 }
+/********************************************************************/
+/* Recive an integer from a TCP server/client                       */
+/********************************************************************/
+int ReciveInt(int dS){
+    int entier;
+    int dR = recv(dS,&entier,sizeof(int),0);
+    if(dR == -1){
+        perror("Error while reciving confirmation : ");
+        exit(1);
+    }
+    return entier;
+}
 
-//Send a message to a UDP server
+/********************************************************************/
+/* Send "message" string to a UDP server with the Hostname/IP and   */
+/* port of the UDP server                                           */
+/********************************************************************/
 void SendMessageUDP(int dS,char * server, char * port,char  * message,int sizeM){
     struct sockaddr_in aD;
     aD.sin_family = AF_INET;
@@ -149,29 +182,34 @@ void SendMessageUDP(int dS,char * server, char * port,char  * message,int sizeM)
     promptS("Success.");
     return;
 }
-//Recive 1 message in UDP
+/********************************************************************/
+/* Recive one message from a UDP client/server                      */
+/********************************************************************/
     int ReciveUDP(int dS,char * buffer){
     struct sockaddr_in aE;
     socklen_t lg = sizeof(aE);
     char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-    int dR = recvfrom(dS,buffer,sizeof(buffer),0,(struct sockaddr*)&aE,&lg); 
+    int dR = recvfrom(dS,buffer,sizeof(buffer),0,(struct sockaddr*)&aE,&lg);
     if(dR == -1){
         perror(ANSI_COLOR_RED "Error while sending message :" ANSI_COLOR_RESET);
         exit(1);
     }
     getnameinfo((struct sockaddr*)&aE,lg,hbuf,sizeof(hbuf), sbuf,sizeof(sbuf),0);
-    printf("Receving message from %s:%s. (size : %d)\n",hbuf,sbuf,dR); 
+    printf("Receving message from %s:%s. (size : %d)\n",hbuf,sbuf,dR);
     printf("Data : %s\n",buffer);
     return dR;
 }
-//Recive a message from a host in TCP
-char * ReciveMessage(int dS,socklen_t length){ 
-    //length is the size of your receving buffer, if set to 0 the size will be the highest that your socket can recv.
+/********************************************************************/
+/* Recive a message in TCP form a server/client                     */
+/* length is the size of your receving buffer, if set to 0 the size */
+/* will be the highest that your socket can recv.                   */
+/********************************************************************/
+char * ReciveMessage(int dS,socklen_t length){
     if(length == 0){
         int dG = getsockopt(dS,SOL_SOCKET,SO_RCVBUF,NULL,&length);
         if(dG == -1){
             perror("Error while getting socketMAXLENGTH :");
-            exit(1); 
+            exit(1);
         }
     }
     char * buffer = malloc(length*sizeof(char));
@@ -185,15 +223,10 @@ char * ReciveMessage(int dS,socklen_t length){
     return buffer;
 }
 
-int ReciveInt(int dS){
-    int entier;
-    int dR = recv(dS,&entier,sizeof(int),0);
-    if(dR == -1){
-        perror("Error while reciving confirmation : ");
-        exit(1);
-    }
-    return entier;
-}
+/********************************************************************/
+/* CURRENTLY IN DEV                 DO NOT LOOK AT THIS MESS XD     */
+/********************************************************************/
+
 
 //Send A file to a server, respecting our protocol
 void sendFile(int dS, char *filename){
@@ -201,7 +234,7 @@ void sendFile(int dS, char *filename){
     filename = basename(filename);
     char ligne[256];
     bzero(ligne,sizeof(ligne));
-    strcat(strcat(ligne,filename),"|"); 
+    strcat(strcat(ligne,filename),"|");
     //Send the name of the file first...
     int dSend = send(dS,ligne,strlen(ligne),0);
     if(dSend == -1){
@@ -222,7 +255,7 @@ void sendFile(int dS, char *filename){
         //CHECK IF OUR FILESIZE IS HIGHER THAN THE BUFFER
         if(file_size <=256){
             char * buffer = (char*) malloc(sizeof(char) * (file_size + 1) );
-            int read_size = fread(buffer, sizeof(char), file_size, handler);    
+            int read_size = fread(buffer, sizeof(char), file_size, handler);
             if (file_size != read_size){
                 // Something went wrong, throw away the memory and set the buffer to NULL
                 free(buffer);
@@ -232,7 +265,7 @@ void sendFile(int dS, char *filename){
                 strcat(ligne,buffer);
                 int dSend = send(dS,ligne,strlen(ligne),0);
                 if(dSend == -1){
-                    perror("Error while sending message : "); 
+                    perror("Error while sending message : ");
                     exit(1);
                 }
             }
@@ -268,7 +301,7 @@ char * getFileName(char * buffer){
     char * fileName = malloc(256*sizeof(char));
     for(int i = 0;i<strlen(buffer);i++){
         if(buffer[i] == '|'){
-            return fileName; 
+            return fileName;
         }
         fileName[i] = buffer[i];
     }
@@ -276,7 +309,7 @@ char * getFileName(char * buffer){
 }
 
 //Recive a file respecting our protocol
-void Recivefile(int dS){ 
+void Recivefile(int dS){
     char buffer[256];
     bzero(buffer,sizeof(buffer));
     //We know the the first 256 bytes will contain the filename because we are in TCP !
@@ -286,7 +319,7 @@ void Recivefile(int dS){
         exit(1);
     }
     char * filename = getFileName(buffer);
-    char rest[strlen(buffer)]; 
+    char rest[strlen(buffer)];
     bzero(rest,sizeof(rest));
     int j = 0;
     //Getting the rest of the buffer without the name
@@ -294,11 +327,11 @@ void Recivefile(int dS){
         rest[j] = buffer[i];
         j++;
     }
-    char path[261]; 
+    char path[261];
     bzero(path,sizeof(path));
     strcat(strcat(path,"./loot/"),filename);
-    FILE * handler = fopen(path,"w"); 
-    bzero(buffer,sizeof(buffer)); 
+    FILE * handler = fopen(path,"w");
+    bzero(buffer,sizeof(buffer));
     strcat(buffer,rest);
     if(handler){
         while(dR != 0){
@@ -318,7 +351,3 @@ void Recivefile(int dS){
         exit(1);
     }
 }
-
-
-
-
