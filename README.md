@@ -11,7 +11,7 @@ Here is an example of usage :
 
 int main(void){
 
-int socketDescriptor = CreateSoccket(1);
+int socketDescriptor = CreateSocket(1);
 .
 .
 . 
