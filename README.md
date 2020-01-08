@@ -1,5 +1,5 @@
 # NetTool
-This is a set of functions that i've been implementing to manage socket creation and management more easily. 
+This is a set of functions that i've been implementing for socket creation and socket management. 
 
 # Usage 
 When you want to create a server or a client in C usgin sockets, you can include this file and code faster.
